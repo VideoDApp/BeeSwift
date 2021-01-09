@@ -1,8 +1,23 @@
 import XCTest
 import Alamofire
+import CryptoKit
 @testable import BeeSwift
 
+enum TestError: Error {
+    case randomDataIncorrect
+}
+
 final class BeeSwiftTests: XCTestCase {
+    public func randomData(ofLength length: Int) throws -> Data {
+        var bytes = [UInt8](repeating: 0, count: length)
+        let status = SecRandomCopyBytes(kSecRandomDefault, length, &bytes)
+        if status == errSecSuccess {
+            return Data(bytes)
+        }
+
+        throw TestError.randomDataIncorrect
+    }
+
     func testUrlContructor() {
         let url = "https://swarm-gateways.net/bzz:/0a4c5bb36b6bc104970741b8734de29e45d874dab7e368e96b0633306139577d/AndroidFileTransfer.dmg"
         let bee = BeeSwift()
@@ -12,38 +27,46 @@ final class BeeSwiftTests: XCTestCase {
 
         bee.setNodeUrl(url: "https://swarm-gateways.net/")
         createdUrl = bee.getDownloadUrl(hash: "0a4c5bb36b6bc104970741b8734de29e45d874dab7e368e96b0633306139577d", path: "AndroidFileTransfer.dmg").absoluteString
-        XCTAssertEqual(createdUrl, url, "Url should be equal. Example 1")
+        XCTAssertEqual(createdUrl, url, "Url should be equal. Example 2")
+
+        createdUrl = bee.getUploadUrl(defaultpath: "hello.txt").absoluteString
+        XCTAssertEqual(createdUrl, "https://swarm-gateways.net/bzz:/?defaultpath=hello.txt", "Url should be equal. Example 3")
+
+        createdUrl = bee.getUploadUrl().absoluteString
+        XCTAssertEqual(createdUrl, "https://swarm-gateways.net/bzz:/", "Url should be equal. Example 4")
     }
 
     func testUploadAndDownload() {
-        // download simple file, check size, store hash
-        // upload swarm file, wait, download, check size/hash
+        continueAfterFailure = false
         
         let bee = BeeSwift("https://swarm-gateways.net/")
-        // download example file
-        var exp = expectation(description: "DownloadExampleData")
-        var exampleData: Data?
-        // todo create dynamic file (as additinoal test?)
-        AF.download("https://file-examples-com.github.io/uploads/2017/04/file_example_MP4_480_1_5MG.mp4")
-            .responseData { response in
-                // todo break test?
-            XCTAssertNotNil(response.value, "No data was downloaded")
-            XCTAssertEqual(response.value!.count, 1570024, "Incorrect file size")
-            exampleData = response.value
+        let exampleData = try! self.randomData(ofLength: 1000000)
+        let dataHash = SHA256.hash(data: exampleData)
+//        print("data hash \(dataHash)")
+        var hash: String?
+        var exp = expectation(description: "UploadData")
+        bee.upload(exampleData, defaultpath: "hello.mp4")
+            .uploadProgress { progress in
+            print("Upload Progress: \(progress.fractionCompleted)")
+        }
+            .responseString { response in
+//            print("response.value --- \(response.value)")
+            XCTAssertEqual(response.value?.count, 64, "Incorrect hash size")
+            hash = response.value!
             exp.fulfill()
         }
-
         waitForExpectations(timeout: 60)
 
-//        exp = expectation(description: "UploadExampleData")
-//        bee.upload()
-//        waitForExpectations(timeout: 60)
 
-        exp = expectation(description: "UploadAndDownload")
-        
-        bee.download(hash: "0a4c5bb36b6bc104970741b8734de29e45d874dab7e368e96b0633306139577d", path: "AndroidFileTransfer.dmg")
+        print("DownloadData start")
+        exp = expectation(description: "DownloadData")
+        bee.download(hash: hash!, path: "hello.mp4")
+            .downloadProgress { progress in
+            print("Download test file progress: \(progress.fractionCompleted)")
+        }
             .responseData { response in
-            XCTAssertNotNil(response.value, "No data was downloaded")
+            XCTAssertEqual(response.value?.count, 1000000, "Incorrect file size")
+            XCTAssertEqual(SHA256.hash(data: response.value!), dataHash, "Incorrect file hash")
             exp.fulfill()
         }
 

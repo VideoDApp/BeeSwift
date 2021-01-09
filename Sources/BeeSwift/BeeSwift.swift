@@ -27,19 +27,23 @@ public class BeeSwift {
         return url
     }
 
-    public func getUploadUrl(defaultpath: String?) -> URL {
-        //https://swarm-gateways.net/bzz:/?defaultpath=%D0%AD%D1%80%D0%B4%D0%BE%D0%B3%D0%B0%D0%BD,_%D0%A0%D0%B5%D0%B4%D0%B6%D0%B5%D0%BF_%D0%A2%D0%B0%D0%B8%CC%86%D0%B8%D0%BF.html
+    public func getUploadUrl(defaultpath: String? = nil) -> URL {
         var url = URL(string: self.nodeUrl)!
         url.appendPathComponent("bzz:/")
+        let queryItems = [URLQueryItem(name: "defaultpath", value: defaultpath)]
+        var urlComps = URLComponents(string: url.absoluteString)!
+        if defaultpath != nil {
+            urlComps.queryItems = queryItems
+        }
 
-        return url
+        return urlComps.url!
     }
 
     public func download(hash: String, path: String = "") -> DownloadRequest {
         return AF.download(self.getDownloadUrl(hash: hash, path: path))
     }
 
-    public func upload(data: Data, defaultpath: String?) -> UploadRequest {
+    public func upload(_ data: Data, defaultpath: String?) -> UploadRequest {
         return AF.upload(data, to: self.getUploadUrl(defaultpath: defaultpath))
     }
 }
