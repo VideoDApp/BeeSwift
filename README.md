@@ -4,13 +4,13 @@ Ethereum Swarm (Bee) web-client implementation.
 
 Protocol description: https://swarm-gateways.net/bzz:/docs.swarm.eth/docs/
 
-Install:
+## Installation
 
 In XCode click: File -> Swift Packages -> Add Package Dependency
 
 Enter repo url: https://github.com/VideoDApp/BeeSwift.git
 
-Using:
+## Using:
 ```swift
 let bee = BeeSwift("https://swarm-gateways.net")
 
