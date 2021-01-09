@@ -10,8 +10,9 @@ In XCode click: File -> Swift Packages -> Add Package Dependency
 
 Enter repo url: https://github.com/VideoDApp/BeeSwift.git
 
-## Using:
+## Using
 ```swift
+// define here public gateways or your node url
 let bee = BeeSwift("https://swarm-gateways.net")
 
 // set content data to exampleData and then you can upload data
